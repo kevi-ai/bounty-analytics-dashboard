@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Bounty Board Analytics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --accent: #22d3ee;
+      --accent-green: #22c55e;
+      --accent-yellow: #eab308;
+      --accent-red: #ef4444;
+      --accent-purple: #a855f7;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p {
+      color: var(--text-secondary);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    }
+
+    .stat-card .icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-card .value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-card .label {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .stat-card.total .value { color: var(--accent); }
+    .stat-card.open .value { color: var(--accent-green); }
+    .stat-card.progress .value { color: var(--accent-yellow); }
+    .stat-card.completed .value { color: var(--accent-purple); }
+    .stat-card.rewards .value { color: var(--accent-green); }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .chart-card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .chart-card h3 {
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+    }
+
+    .leaderboard {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 2rem;
+    }
+
+    .leaderboard h3 {
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .leaderboard-table th,
+    .leaderboard-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .leaderboard-table th {
+      color: var(--text-secondary);
+      font-weight: 500;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+    }
+
+    .leaderboard-table tr:hover {
+      background: rgba(255,255,255,0.05);
+    }
+
+    .rank {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-weight: bold;
+      font-size: 0.85rem;
+    }
+
+    .rank-1 { background: linear-gradient(135deg, #ffd700, #ffb800); color: #000; }
+    .rank-2 { background: linear-gradient(135deg, #c0c0c0, #a8a8a8); color: #000; }
+    .rank-3 { background: linear-gradient(135deg, #cd7f32, #b87333); color: #fff; }
+    .rank-other { background: var(--bg-card); color: var(--text-secondary); }
+
+    .address {
+      font-family: monospace;
+      color: var(--accent);
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      background: var(--bg-card);
+      border-radius: 4px;
+      font-size: 0.8rem;
+      margin: 0.1rem;
+    }
+
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .recent-bounties {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .recent-bounties h3 {
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .bounty-item {
+      padding: 1rem;
+      background: var(--bg-card);
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .bounty-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .bounty-title {
+      font-weight: 500;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .bounty-reward {
+      color: var(--accent-green);
+      font-weight: bold;
+    }
+
+    .bounty-status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .status-open { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+    .status-claimed { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
+    .status-completed { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-secondary);
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--bg-card);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--accent-red);
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .refresh-btn {
+      background: var(--accent);
+      color: var(--bg-primary);
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+
+    .refresh-btn:hover {
+      opacity: 0.8;
+    }
+
+    .header-actions {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .last-updated {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-secondary);
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    @media (max-width: 768px) {
+      body { padding: 1rem; }
+      header h1 { font-size: 1.75rem; }
+      .charts-grid { grid-template-columns: 1fr; }
+      .stat-card .value { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📊 AI Bounty Board Analytics</h1>
+      <p>Real-time insights into bounty activity and contributor performance</p>
+      <div class="header-actions">
+        <button class="refresh-btn" onclick="loadData()">🔄 Refresh</button>
+        <span class="last-updated" id="lastUpdated"></span>
+      </div>
+    </header>
+
+    <div id="content">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Loading analytics...</p>
+      </div>
+    </div>
+
+    <footer>
+      <p>Built by <a href="https://github.com/kevi-ai" target="_blank">kevi-ai</a> for the <a href="https://bounty.owockibot.xyz" target="_blank">AI Bounty Board</a></p>
+    </footer>
+  </div>
+
+  <script>
+    const API_BASE = 'https://bounty.owockibot.xyz';
+    
+    let bounties = [];
+    let stats = {};
+
+    async function fetchBounties() {
+      const res = await fetch(`${API_BASE}/bounties`);
+      if (!res.ok) throw new Error('Failed to fetch bounties');
+      return res.json();
+    }
+
+    async function fetchStats() {
+      const res = await fetch(`${API_BASE}/stats`);
+      if (!res.ok) throw new Error('Failed to fetch stats');
+      return res.json();
+    }
+
+    function calculateAnalytics(bounties) {
+      const total = bounties.length;
+      const open = bounties.filter(b => b.status === 'open').length;
+      const claimed = bounties.filter(b => b.status === 'claimed').length;
+      const completed = bounties.filter(b => b.status === 'completed').length;
+      
+      const totalRewards = bounties.reduce((sum, b) => sum + (parseFloat(b.reward) || 0), 0);
+      const completedRewards = bounties
+        .filter(b => b.status === 'completed')
+        .reduce((sum, b) => sum + (parseFloat(b.reward) || 0), 0);
+
+      // Tag distribution
+      const tagCounts = {};
+      bounties.forEach(b => {
+        (b.tags || []).forEach(tag => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
+      });
+
+      // Completion by tag
+      const tagCompletion = {};
+      Object.keys(tagCounts).forEach(tag => {
+        const tagBounties = bounties.filter(b => (b.tags || []).includes(tag));
+        const tagCompleted = tagBounties.filter(b => b.status === 'completed').length;
+        tagCompletion[tag] = {
+          total: tagBounties.length,
+          completed: tagCompleted,
+          rate: tagBounties.length > 0 ? (tagCompleted / tagBounties.length * 100).toFixed(1) : 0
+        };
+      });
+
+      // Top contributors
+      const contributors = {};
+      bounties.filter(b => b.claimedBy).forEach(b => {
+        const addr = b.claimedBy;
+        if (!contributors[addr]) {
+          contributors[addr] = { address: addr, claimed: 0, completed: 0, earnings: 0 };
+        }
+        contributors[addr].claimed++;
+        if (b.status === 'completed') {
+          contributors[addr].completed++;
+          contributors[addr].earnings += parseFloat(b.reward) || 0;
+        }
+      });
+
+      const topContributors = Object.values(contributors)
+        .sort((a, b) => b.completed - a.completed || b.earnings - a.earnings)
+        .slice(0, 10);
+
+      // Rewards by tag
+      const rewardsByTag = {};
+      bounties.forEach(b => {
+        (b.tags || []).forEach(tag => {
+          rewardsByTag[tag] = (rewardsByTag[tag] || 0) + (parseFloat(b.reward) || 0);
+        });
+      });
+
+      // Average completion time (mock - would need timestamps)
+      const avgCompletionDays = completed > 0 ? Math.round(Math.random() * 5 + 2) : 0;
+
+      return {
+        total,
+        open,
+        claimed,
+        completed,
+        totalRewards,
+        completedRewards,
+        tagCounts,
+        tagCompletion,
+        topContributors,
+        rewardsByTag,
+        avgCompletionDays,
+        completionRate: total > 0 ? ((completed / total) * 100).toFixed(1) : 0
+      };
+    }
+
+    function renderDashboard(analytics) {
+      const content = document.getElementById('content');
+      
+      content.innerHTML = `
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card total">
+            <div class="icon">📋</div>
+            <div class="value">${analytics.total}</div>
+            <div class="label">Total Bounties</div>
+          </div>
+          <div class="stat-card open">
+            <div class="icon">🟢</div>
+            <div class="value">${analytics.open}</div>
+            <div class="label">Open</div>
+          </div>
+          <div class="stat-card progress">
+            <div class="icon">🟡</div>
+            <div class="value">${analytics.claimed}</div>
+            <div class="label">In Progress</div>
+          </div>
+          <div class="stat-card completed">
+            <div class="icon">✅</div>
+            <div class="value">${analytics.completed}</div>
+            <div class="label">Completed</div>
+          </div>
+          <div class="stat-card rewards">
+            <div class="icon">💰</div>
+            <div class="value">$${analytics.totalRewards.toFixed(0)}</div>
+            <div class="label">Total Rewards</div>
+          </div>
+          <div class="stat-card rewards">
+            <div class="icon">🎯</div>
+            <div class="value">${analytics.completionRate}%</div>
+            <div class="label">Completion Rate</div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>📊 Bounty Status Distribution</h3>
+            <div class="chart-container">
+              <canvas id="statusChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>🏷️ Rewards by Tag</h3>
+            <div class="chart-container">
+              <canvas id="tagsChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>📈 Tag Completion Rates</h3>
+            <div class="chart-container">
+              <canvas id="completionChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>🎯 Tag Distribution</h3>
+            <div class="chart-container">
+              <canvas id="distributionChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="leaderboard">
+          <h3>🏆 Top Contributors</h3>
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Address</th>
+                <th>Completed</th>
+                <th>Claimed</th>
+                <th>Earnings</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${analytics.topContributors.length > 0 ? 
+                analytics.topContributors.map((c, i) => `
+                  <tr>
+                    <td><span class="rank rank-${i < 3 ? i + 1 : 'other'}">${i + 1}</span></td>
+                    <td class="address">${c.address.slice(0, 6)}...${c.address.slice(-4)}</td>
+                    <td>${c.completed}</td>
+                    <td>${c.claimed}</td>
+                    <td>$${c.earnings.toFixed(2)} USDC</td>
+                  </tr>
+                `).join('') :
+                '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">No contributors yet</td></tr>'
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Recent Bounties -->
+        <div class="recent-bounties">
+          <h3>📝 Recent Bounties</h3>
+          ${bounties.slice(0, 8).map(b => `
+            <div class="bounty-item">
+              <span class="bounty-title">${b.title || 'Untitled Bounty'}</span>
+              <span class="bounty-reward">$${parseFloat(b.reward || 0).toFixed(2)} USDC</span>
+              <span class="bounty-status status-${b.status}">${b.status}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      renderCharts(analytics);
+    }
+
+    function renderCharts(analytics) {
+      // Status Distribution Pie Chart
+      new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Open', 'In Progress', 'Completed'],
+          datasets: [{
+            data: [analytics.open, analytics.claimed, analytics.completed],
+            backgroundColor: ['#22c55e', '#eab308', '#a855f7'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#f8fafc' }
+            }
+          }
+        }
+      });
+
+      // Rewards by Tag Bar Chart
+      const sortedTags = Object.entries(analytics.rewardsByTag)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8);
+      
+      new Chart(document.getElementById('tagsChart'), {
+        type: 'bar',
+        data: {
+          labels: sortedTags.map(([tag]) => tag),
+          datasets: [{
+            label: 'Rewards (USDC)',
+            data: sortedTags.map(([, val]) => val),
+            backgroundColor: '#22d3ee',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              ticks: { color: '#94a3b8' }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: '#f8fafc' }
+            }
+          }
+        }
+      });
+
+      // Completion Rates Bar Chart
+      const tagCompletionEntries = Object.entries(analytics.tagCompletion)
+        .filter(([, v]) => v.total >= 2)
+        .sort((a, b) => b[1].rate - a[1].rate)
+        .slice(0, 8);
+
+      new Chart(document.getElementById('completionChart'), {
+        type: 'bar',
+        data: {
+          labels: tagCompletionEntries.map(([tag]) => tag),
+          datasets: [{
+            label: 'Completion Rate %',
+            data: tagCompletionEntries.map(([, v]) => v.rate),
+            backgroundColor: '#a855f7',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              ticks: { color: '#94a3b8' }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: '#f8fafc' },
+              max: 100
+            }
+          }
+        }
+      });
+
+      // Tag Distribution Pie Chart
+      const topTagDist = Object.entries(analytics.tagCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6);
+
+      new Chart(document.getElementById('distributionChart'), {
+        type: 'pie',
+        data: {
+          labels: topTagDist.map(([tag]) => tag),
+          datasets: [{
+            data: topTagDist.map(([, count]) => count),
+            backgroundColor: ['#22d3ee', '#22c55e', '#eab308', '#ef4444', '#a855f7', '#f97316'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#f8fafc' }
+            }
+          }
+        }
+      });
+    }
+
+    function showError(message) {
+      document.getElementById('content').innerHTML = `
+        <div class="error">
+          <p>⚠️ ${message}</p>
+          <button class="refresh-btn" onclick="loadData()" style="margin-top:1rem">Try Again</button>
+        </div>
+      `;
+    }
+
+    async function loadData() {
+      document.getElementById('content').innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading analytics...</p>
+        </div>
+      `;
+
+      try {
+        bounties = await fetchBounties();
+        const analytics = calculateAnalytics(bounties);
+        renderDashboard(analytics);
+        
+        document.getElementById('lastUpdated').textContent = 
+          `Last updated: ${new Date().toLocaleTimeString()}`;
+      } catch (error) {
+        console.error('Error loading data:', error);
+        showError('Failed to load bounty data. The API might be temporarily unavailable.');
+      }
+    }
+
+    // Initial load
+    loadData();
+
+    // Auto-refresh every 5 minutes
+    setInterval(loadData, 5 * 60 * 1000);
+  </script>
+</body>
+</html>
