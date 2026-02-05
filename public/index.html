@@ -4,689 +4,746 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Bounty Board Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --bg-primary: #0f172a;
-      --bg-secondary: #1e293b;
-      --bg-card: #334155;
-      --text-primary: #f8fafc;
-      --text-secondary: #94a3b8;
-      --accent: #22d3ee;
-      --accent-green: #22c55e;
-      --accent-yellow: #eab308;
-      --accent-red: #ef4444;
-      --accent-purple: #a855f7;
+      --bg-base: #09090b;
+      --bg-surface: #18181b;
+      --bg-elevated: #27272a;
+      --bg-hover: #3f3f46;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #3b82f6;
+      --accent-light: #60a5fa;
+      --green: #22c55e;
+      --green-bg: rgba(34, 197, 94, 0.1);
+      --yellow: #eab308;
+      --yellow-bg: rgba(234, 179, 8, 0.1);
+      --purple: #a855f7;
+      --purple-bg: rgba(168, 85, 247, 0.1);
+      --red: #ef4444;
+      --cyan: #06b6d4;
+      --orange: #f97316;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
+      --shadow-lg: 0 10px 40px rgba(0,0,0,0.4);
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-base);
       color: var(--text-primary);
+      line-height: 1.6;
       min-height: 100vh;
-      padding: 2rem;
     }
 
-    .container {
+    .app {
       max-width: 1400px;
       margin: 0 auto;
+      padding: 24px;
     }
 
-    header {
-      text-align: center;
-      margin-bottom: 2rem;
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 16px;
     }
 
-    header h1 {
-      font-size: 2.5rem;
-      margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+    .header-left h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-left h1 span {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
 
-    header p {
+    .header-left p {
       color: var(--text-secondary);
+      font-size: 14px;
+      margin-top: 4px;
     }
 
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .last-update {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-light);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    /* Stats Grid */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 1200px) {
+      .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 640px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     .stat-card {
-      background: var(--bg-secondary);
-      border-radius: 12px;
-      padding: 1.5rem;
-      text-align: center;
-      border: 1px solid rgba(255,255,255,0.1);
-      transition: transform 0.2s, box-shadow 0.2s;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      transition: all 0.2s ease;
     }
 
     .stat-card:hover {
+      border-color: var(--border-light);
       transform: translateY(-2px);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+      box-shadow: var(--shadow);
     }
 
-    .stat-card .icon {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
+    .stat-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
     }
 
-    .stat-card .value {
-      font-size: 2.5rem;
-      font-weight: bold;
-      margin-bottom: 0.25rem;
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      line-height: 1.1;
     }
 
-    .stat-card .label {
-      color: var(--text-secondary);
-      font-size: 0.9rem;
+    .stat-value.green { color: var(--green); }
+    .stat-value.yellow { color: var(--yellow); }
+    .stat-value.purple { color: var(--purple); }
+    .stat-value.cyan { color: var(--cyan); }
+
+    .stat-change {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      margin-top: 8px;
+      padding: 2px 8px;
+      border-radius: 20px;
     }
 
-    .stat-card.total .value { color: var(--accent); }
-    .stat-card.open .value { color: var(--accent-green); }
-    .stat-card.progress .value { color: var(--accent-yellow); }
-    .stat-card.completed .value { color: var(--accent-purple); }
-    .stat-card.rewards .value { color: var(--accent-green); }
+    .stat-change.positive {
+      background: var(--green-bg);
+      color: var(--green);
+    }
 
-    .charts-grid {
+    /* Main Grid */
+    .main-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
     }
 
-    .chart-card {
-      background: var(--bg-secondary);
-      border-radius: 12px;
-      padding: 1.5rem;
-      border: 1px solid rgba(255,255,255,0.1);
+    @media (max-width: 1024px) {
+      .main-grid { grid-template-columns: 1fr; }
     }
 
-    .chart-card h3 {
-      margin-bottom: 1rem;
-      color: var(--text-primary);
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 10px;
+    }
+
+    .card-title svg {
+      width: 20px;
+      height: 20px;
+      color: var(--text-muted);
+    }
+
+    .card-body {
+      padding: 24px;
+    }
+
+    /* Charts */
+    .chart-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .chart-row { grid-template-columns: 1fr; }
     }
 
     .chart-container {
       position: relative;
-      height: 300px;
+      height: 280px;
     }
 
-    .leaderboard {
-      background: var(--bg-secondary);
-      border-radius: 12px;
-      padding: 1.5rem;
-      border: 1px solid rgba(255,255,255,0.1);
-      margin-bottom: 2rem;
-    }
-
-    .leaderboard h3 {
-      margin-bottom: 1rem;
+    /* Leaderboard */
+    .leaderboard-item {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
     }
 
-    .leaderboard-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .leaderboard-table th,
-    .leaderboard-table td {
-      padding: 0.75rem;
-      text-align: left;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .leaderboard-table th {
-      color: var(--text-secondary);
-      font-weight: 500;
-      font-size: 0.85rem;
-      text-transform: uppercase;
-    }
-
-    .leaderboard-table tr:hover {
-      background: rgba(255,255,255,0.05);
+    .leaderboard-item:last-child {
+      border-bottom: none;
     }
 
     .rank {
-      display: inline-flex;
+      width: 32px;
+      height: 32px;
+      display: flex;
       align-items: center;
       justify-content: center;
-      width: 28px;
-      height: 28px;
       border-radius: 50%;
-      font-weight: bold;
-      font-size: 0.85rem;
+      font-size: 14px;
+      font-weight: 600;
     }
 
     .rank-1 { background: linear-gradient(135deg, #ffd700, #ffb800); color: #000; }
-    .rank-2 { background: linear-gradient(135deg, #c0c0c0, #a8a8a8); color: #000; }
-    .rank-3 { background: linear-gradient(135deg, #cd7f32, #b87333); color: #fff; }
-    .rank-other { background: var(--bg-card); color: var(--text-secondary); }
+    .rank-2 { background: linear-gradient(135deg, #e8e8e8, #c0c0c0); color: #000; }
+    .rank-3 { background: linear-gradient(135deg, #cd7f32, #a0522d); color: #fff; }
+    .rank-other { background: var(--bg-elevated); color: var(--text-secondary); }
 
-    .address {
-      font-family: monospace;
-      color: var(--accent);
+    .leaderboard-info {
+      flex: 1;
+      min-width: 0;
     }
 
-    .tag {
-      display: inline-block;
-      padding: 0.25rem 0.5rem;
-      background: var(--bg-card);
-      border-radius: 4px;
-      font-size: 0.8rem;
-      margin: 0.1rem;
+    .leaderboard-address {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 14px;
+      color: var(--accent-light);
     }
 
-    .tags-container {
+    .leaderboard-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .leaderboard-earnings {
+      font-weight: 600;
+      color: var(--green);
+      font-size: 14px;
+    }
+
+    /* Bounty List */
+    .bounty-list {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-
-    .recent-bounties {
-      background: var(--bg-secondary);
-      border-radius: 12px;
-      padding: 1.5rem;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .recent-bounties h3 {
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      flex-direction: column;
+      gap: 12px;
     }
 
     .bounty-item {
-      padding: 1rem;
-      background: var(--bg-card);
-      border-radius: 8px;
-      margin-bottom: 0.75rem;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 16px;
+      padding: 16px;
+      background: var(--bg-elevated);
+      border-radius: var(--radius-md);
+      transition: all 0.15s ease;
     }
 
-    .bounty-item:last-child {
-      margin-bottom: 0;
+    .bounty-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .bounty-info {
+      flex: 1;
+      min-width: 0;
     }
 
     .bounty-title {
+      font-size: 14px;
       font-weight: 500;
-      flex: 1;
-      min-width: 200px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bounty-tags {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: var(--bg-surface);
+      border-radius: 4px;
+      color: var(--text-muted);
     }
 
     .bounty-reward {
-      color: var(--accent-green);
-      font-weight: bold;
+      font-weight: 600;
+      color: var(--green);
+      white-space: nowrap;
     }
 
-    .bounty-status {
-      padding: 0.25rem 0.75rem;
-      border-radius: 20px;
-      font-size: 0.8rem;
+    .status-badge {
+      font-size: 11px;
       font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
     }
 
-    .status-open { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
-    .status-claimed { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
-    .status-completed { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); }
+    .status-open { background: var(--green-bg); color: var(--green); }
+    .status-claimed { background: var(--yellow-bg); color: var(--yellow); }
+    .status-completed { background: var(--purple-bg); color: var(--purple); }
 
-    .loading {
+    /* Footer */
+    .footer {
       text-align: center;
-      padding: 2rem;
-      color: var(--text-secondary);
+      padding: 32px 0;
+      border-top: 1px solid var(--border);
+      margin-top: 24px;
+    }
+
+    .footer p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .footer a {
+      color: var(--accent-light);
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Loading */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
     }
 
     .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid var(--bg-card);
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border);
       border-top-color: var(--accent);
       border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 1rem;
+      animation: spin 0.8s linear infinite;
     }
 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
 
+    .loading p {
+      margin-top: 16px;
+      color: var(--text-secondary);
+    }
+
+    /* Error */
     .error {
-      background: rgba(239, 68, 68, 0.2);
-      color: var(--accent-red);
-      padding: 1rem;
-      border-radius: 8px;
       text-align: center;
+      padding: 60px 20px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: var(--radius-lg);
     }
 
-    .refresh-btn {
-      background: var(--accent);
-      color: var(--bg-primary);
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: opacity 0.2s;
+    .error h3 {
+      color: var(--red);
+      margin-bottom: 8px;
     }
 
-    .refresh-btn:hover {
-      opacity: 0.8;
+    .error p {
+      color: var(--text-secondary);
+      margin-bottom: 20px;
     }
 
-    .header-actions {
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+    }
+
+    /* Live indicator */
+    .live-indicator {
       display: flex;
-      justify-content: center;
-      gap: 1rem;
-      margin-top: 1rem;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--green);
     }
 
-    .last-updated {
-      color: var(--text-secondary);
-      font-size: 0.85rem;
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
     }
 
-    footer {
-      text-align: center;
-      margin-top: 2rem;
-      padding-top: 2rem;
-      border-top: 1px solid rgba(255,255,255,0.1);
-      color: var(--text-secondary);
-    }
-
-    footer a {
-      color: var(--accent);
-      text-decoration: none;
-    }
-
-    @media (max-width: 768px) {
-      body { padding: 1rem; }
-      header h1 { font-size: 1.75rem; }
-      .charts-grid { grid-template-columns: 1fr; }
-      .stat-card .value { font-size: 2rem; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>📊 AI Bounty Board Analytics</h1>
-      <p>Real-time insights into bounty activity and contributor performance</p>
-      <div class="header-actions">
-        <button class="refresh-btn" onclick="loadData()">🔄 Refresh</button>
-        <span class="last-updated" id="lastUpdated"></span>
+  <div class="app">
+    <header class="header">
+      <div class="header-left">
+        <h1>📊 <span>AI Bounty Board</span> Analytics</h1>
+        <p>Real-time insights into bounty activity and contributor performance</p>
+      </div>
+      <div class="header-right">
+        <div class="live-indicator">
+          <div class="live-dot"></div>
+          Live
+        </div>
+        <span class="last-update" id="lastUpdate">Updated just now</span>
+        <button class="btn btn-primary" onclick="loadData()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+          Refresh
+        </button>
       </div>
     </header>
 
-    <div id="content">
+    <main id="content">
       <div class="loading">
         <div class="spinner"></div>
-        <p>Loading analytics...</p>
+        <p>Loading analytics data...</p>
       </div>
-    </div>
+    </main>
 
-    <footer>
-      <p>Built by <a href="https://github.com/kevi-ai" target="_blank">kevi-ai</a> for the <a href="https://bounty.owockibot.xyz" target="_blank">AI Bounty Board</a></p>
+    <footer class="footer">
+      <p>Built by <a href="https://github.com/kevi-ai" target="_blank">kevi-ai</a> · Data from <a href="https://bounty.owockibot.xyz" target="_blank">AI Bounty Board</a></p>
     </footer>
   </div>
 
   <script>
-    const API_BASE = 'https://bounty.owockibot.xyz';
-    
+    const API = 'https://bounty.owockibot.xyz';
     let bounties = [];
-    let stats = {};
 
-    async function fetchBounties() {
-      const res = await fetch(`${API_BASE}/bounties`);
-      if (!res.ok) throw new Error('Failed to fetch bounties');
-      return res.json();
+    async function fetchData() {
+      const [bountiesRes] = await Promise.all([
+        fetch(`${API}/bounties`).then(r => r.json())
+      ]);
+      return bountiesRes;
     }
 
-    async function fetchStats() {
-      const res = await fetch(`${API_BASE}/stats`);
-      if (!res.ok) throw new Error('Failed to fetch stats');
-      return res.json();
-    }
+    function analyze(data) {
+      const total = data.length;
+      const open = data.filter(b => b.status === 'open').length;
+      const claimed = data.filter(b => b.status === 'claimed').length;
+      const completed = data.filter(b => b.status === 'completed').length;
+      const totalRewards = data.reduce((s, b) => s + parseReward(b.reward), 0);
+      const completionRate = total > 0 ? ((completed / total) * 100).toFixed(1) : 0;
 
-    function calculateAnalytics(bounties) {
-      const total = bounties.length;
-      const open = bounties.filter(b => b.status === 'open').length;
-      const claimed = bounties.filter(b => b.status === 'claimed').length;
-      const completed = bounties.filter(b => b.status === 'completed').length;
-      
-      const totalRewards = bounties.reduce((sum, b) => sum + (parseFloat(b.reward) || 0), 0);
-      const completedRewards = bounties
-        .filter(b => b.status === 'completed')
-        .reduce((sum, b) => sum + (parseFloat(b.reward) || 0), 0);
-
-      // Tag distribution
+      // Tag stats
       const tagCounts = {};
-      bounties.forEach(b => {
-        (b.tags || []).forEach(tag => {
-          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      const tagRewards = {};
+      data.forEach(b => {
+        (b.tags || []).forEach(t => {
+          tagCounts[t] = (tagCounts[t] || 0) + 1;
+          tagRewards[t] = (tagRewards[t] || 0) + parseReward(b.reward);
         });
       });
 
-      // Completion by tag
-      const tagCompletion = {};
-      Object.keys(tagCounts).forEach(tag => {
-        const tagBounties = bounties.filter(b => (b.tags || []).includes(tag));
-        const tagCompleted = tagBounties.filter(b => b.status === 'completed').length;
-        tagCompletion[tag] = {
-          total: tagBounties.length,
-          completed: tagCompleted,
-          rate: tagBounties.length > 0 ? (tagCompleted / tagBounties.length * 100).toFixed(1) : 0
-        };
-      });
-
-      // Top contributors
+      // Contributors
       const contributors = {};
-      bounties.filter(b => b.claimedBy).forEach(b => {
+      data.filter(b => b.claimedBy).forEach(b => {
         const addr = b.claimedBy;
-        if (!contributors[addr]) {
-          contributors[addr] = { address: addr, claimed: 0, completed: 0, earnings: 0 };
-        }
+        if (!contributors[addr]) contributors[addr] = { address: addr, claimed: 0, completed: 0, earnings: 0 };
         contributors[addr].claimed++;
         if (b.status === 'completed') {
           contributors[addr].completed++;
-          contributors[addr].earnings += parseFloat(b.reward) || 0;
+          contributors[addr].earnings += parseReward(b.reward);
         }
       });
 
-      const topContributors = Object.values(contributors)
-        .sort((a, b) => b.completed - a.completed || b.earnings - a.earnings)
-        .slice(0, 10);
-
-      // Rewards by tag
-      const rewardsByTag = {};
-      bounties.forEach(b => {
-        (b.tags || []).forEach(tag => {
-          rewardsByTag[tag] = (rewardsByTag[tag] || 0) + (parseFloat(b.reward) || 0);
-        });
-      });
-
-      // Average completion time (mock - would need timestamps)
-      const avgCompletionDays = completed > 0 ? Math.round(Math.random() * 5 + 2) : 0;
-
       return {
-        total,
-        open,
-        claimed,
-        completed,
-        totalRewards,
-        completedRewards,
-        tagCounts,
-        tagCompletion,
-        topContributors,
-        rewardsByTag,
-        avgCompletionDays,
-        completionRate: total > 0 ? ((completed / total) * 100).toFixed(1) : 0
+        total, open, claimed, completed, totalRewards, completionRate,
+        tagCounts, tagRewards,
+        topContributors: Object.values(contributors).sort((a, b) => b.completed - a.completed || b.earnings - a.earnings).slice(0, 5),
+        recentBounties: data.slice(0, 6)
       };
     }
 
-    function renderDashboard(analytics) {
-      const content = document.getElementById('content');
-      
-      content.innerHTML = `
-        <!-- Stats Cards -->
+    // USDC has 6 decimals, so divide by 1e6
+    function parseReward(raw) {
+      return (parseFloat(raw) || 0) / 1e6;
+    }
+
+    function formatNumber(n) {
+      if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return n.toFixed(n < 100 ? 2 : 0);
+    }
+
+    function formatUSD(n) {
+      return '$' + formatNumber(n);
+    }
+
+    function render(stats) {
+      document.getElementById('content').innerHTML = `
         <div class="stats-grid">
-          <div class="stat-card total">
-            <div class="icon">📋</div>
-            <div class="value">${analytics.total}</div>
-            <div class="label">Total Bounties</div>
+          <div class="stat-card">
+            <div class="stat-label">Total Bounties</div>
+            <div class="stat-value">${stats.total}</div>
           </div>
-          <div class="stat-card open">
-            <div class="icon">🟢</div>
-            <div class="value">${analytics.open}</div>
-            <div class="label">Open</div>
+          <div class="stat-card">
+            <div class="stat-label">Open</div>
+            <div class="stat-value green">${stats.open}</div>
           </div>
-          <div class="stat-card progress">
-            <div class="icon">🟡</div>
-            <div class="value">${analytics.claimed}</div>
-            <div class="label">In Progress</div>
+          <div class="stat-card">
+            <div class="stat-label">In Progress</div>
+            <div class="stat-value yellow">${stats.claimed}</div>
           </div>
-          <div class="stat-card completed">
-            <div class="icon">✅</div>
-            <div class="value">${analytics.completed}</div>
-            <div class="label">Completed</div>
+          <div class="stat-card">
+            <div class="stat-label">Completed</div>
+            <div class="stat-value purple">${stats.completed}</div>
           </div>
-          <div class="stat-card rewards">
-            <div class="icon">💰</div>
-            <div class="value">$${analytics.totalRewards.toFixed(0)}</div>
-            <div class="label">Total Rewards</div>
+          <div class="stat-card">
+            <div class="stat-label">Total Rewards</div>
+            <div class="stat-value cyan">${formatUSD(stats.totalRewards)}</div>
           </div>
-          <div class="stat-card rewards">
-            <div class="icon">🎯</div>
-            <div class="value">${analytics.completionRate}%</div>
-            <div class="label">Completion Rate</div>
+          <div class="stat-card">
+            <div class="stat-label">Completion Rate</div>
+            <div class="stat-value">${stats.completionRate}%</div>
+            <div class="stat-change positive">↑ Active</div>
           </div>
         </div>
 
-        <!-- Charts -->
-        <div class="charts-grid">
-          <div class="chart-card">
-            <h3>📊 Bounty Status Distribution</h3>
-            <div class="chart-container">
-              <canvas id="statusChart"></canvas>
+        <div class="chart-row">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                Status Distribution
+              </h3>
+            </div>
+            <div class="card-body">
+              <div class="chart-container"><canvas id="statusChart"></canvas></div>
             </div>
           </div>
-          <div class="chart-card">
-            <h3>🏷️ Rewards by Tag</h3>
-            <div class="chart-container">
-              <canvas id="tagsChart"></canvas>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+                Rewards by Tag
+              </h3>
             </div>
-          </div>
-          <div class="chart-card">
-            <h3>📈 Tag Completion Rates</h3>
-            <div class="chart-container">
-              <canvas id="completionChart"></canvas>
-            </div>
-          </div>
-          <div class="chart-card">
-            <h3>🎯 Tag Distribution</h3>
-            <div class="chart-container">
-              <canvas id="distributionChart"></canvas>
+            <div class="card-body">
+              <div class="chart-container"><canvas id="rewardsChart"></canvas></div>
             </div>
           </div>
         </div>
 
-        <!-- Leaderboard -->
-        <div class="leaderboard">
-          <h3>🏆 Top Contributors</h3>
-          <table class="leaderboard-table">
-            <thead>
-              <tr>
-                <th>Rank</th>
-                <th>Address</th>
-                <th>Completed</th>
-                <th>Claimed</th>
-                <th>Earnings</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${analytics.topContributors.length > 0 ? 
-                analytics.topContributors.map((c, i) => `
-                  <tr>
-                    <td><span class="rank rank-${i < 3 ? i + 1 : 'other'}">${i + 1}</span></td>
-                    <td class="address">${c.address.slice(0, 6)}...${c.address.slice(-4)}</td>
-                    <td>${c.completed}</td>
-                    <td>${c.claimed}</td>
-                    <td>$${c.earnings.toFixed(2)} USDC</td>
-                  </tr>
-                `).join('') :
-                '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">No contributors yet</td></tr>'
-              }
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Recent Bounties -->
-        <div class="recent-bounties">
-          <h3>📝 Recent Bounties</h3>
-          ${bounties.slice(0, 8).map(b => `
-            <div class="bounty-item">
-              <span class="bounty-title">${b.title || 'Untitled Bounty'}</span>
-              <span class="bounty-reward">$${parseFloat(b.reward || 0).toFixed(2)} USDC</span>
-              <span class="bounty-status status-${b.status}">${b.status}</span>
+        <div class="main-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                Recent Bounties
+              </h3>
             </div>
-          `).join('')}
+            <div class="card-body">
+              <div class="bounty-list">
+                ${stats.recentBounties.map(b => `
+                  <div class="bounty-item">
+                    <div class="bounty-info">
+                      <div class="bounty-title">${b.title || 'Untitled'}</div>
+                      <div class="bounty-tags">
+                        ${(b.tags || []).slice(0, 3).map(t => `<span class="tag">${t}</span>`).join('')}
+                      </div>
+                    </div>
+                    <div class="bounty-reward">${formatUSD(parseReward(b.reward))}</div>
+                    <span class="status-badge status-${b.status}">${b.status}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                Top Contributors
+              </h3>
+            </div>
+            <div class="card-body">
+              ${stats.topContributors.length > 0 ? stats.topContributors.map((c, i) => `
+                <div class="leaderboard-item">
+                  <div class="rank rank-${i < 3 ? i + 1 : 'other'}">${i + 1}</div>
+                  <div class="leaderboard-info">
+                    <div class="leaderboard-address">${c.address.slice(0, 6)}...${c.address.slice(-4)}</div>
+                    <div class="leaderboard-meta">${c.completed} completed · ${c.claimed} claimed</div>
+                  </div>
+                  <div class="leaderboard-earnings">${formatUSD(c.earnings)}</div>
+                </div>
+              `).join('') : '<div class="empty-state">No contributors yet</div>'}
+            </div>
+          </div>
         </div>
       `;
 
-      renderCharts(analytics);
+      // Render charts
+      renderCharts(stats);
     }
 
-    function renderCharts(analytics) {
-      // Status Distribution Pie Chart
+    function renderCharts(stats) {
+      // Status chart
       new Chart(document.getElementById('statusChart'), {
         type: 'doughnut',
         data: {
           labels: ['Open', 'In Progress', 'Completed'],
           datasets: [{
-            data: [analytics.open, analytics.claimed, analytics.completed],
+            data: [stats.open, stats.claimed, stats.completed],
             backgroundColor: ['#22c55e', '#eab308', '#a855f7'],
-            borderWidth: 0
+            borderWidth: 0,
+            spacing: 2
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          cutout: '70%',
           plugins: {
             legend: {
               position: 'bottom',
-              labels: { color: '#f8fafc' }
+              labels: { color: '#a1a1aa', padding: 20, font: { size: 12 } }
             }
           }
         }
       });
 
-      // Rewards by Tag Bar Chart
-      const sortedTags = Object.entries(analytics.rewardsByTag)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8);
-      
-      new Chart(document.getElementById('tagsChart'), {
+      // Rewards by tag
+      const sortedTags = Object.entries(stats.tagRewards).sort((a, b) => b[1] - a[1]).slice(0, 6);
+      new Chart(document.getElementById('rewardsChart'), {
         type: 'bar',
         data: {
-          labels: sortedTags.map(([tag]) => tag),
+          labels: sortedTags.map(([t]) => t),
           datasets: [{
-            label: 'Rewards (USDC)',
-            data: sortedTags.map(([, val]) => val),
-            backgroundColor: '#22d3ee',
-            borderRadius: 4
+            data: sortedTags.map(([, v]) => v),
+            backgroundColor: ['#3b82f6', '#22c55e', '#a855f7', '#eab308', '#06b6d4', '#f97316'],
+            borderRadius: 6,
+            borderSkipped: false
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           indexAxis: 'y',
-          plugins: {
-            legend: { display: false }
-          },
+          plugins: { legend: { display: false } },
           scales: {
             x: {
-              grid: { color: 'rgba(255,255,255,0.1)' },
-              ticks: { color: '#94a3b8' }
+              grid: { color: '#27272a' },
+              ticks: { color: '#71717a', callback: v => formatUSD(v) }
             },
             y: {
               grid: { display: false },
-              ticks: { color: '#f8fafc' }
-            }
-          }
-        }
-      });
-
-      // Completion Rates Bar Chart
-      const tagCompletionEntries = Object.entries(analytics.tagCompletion)
-        .filter(([, v]) => v.total >= 2)
-        .sort((a, b) => b[1].rate - a[1].rate)
-        .slice(0, 8);
-
-      new Chart(document.getElementById('completionChart'), {
-        type: 'bar',
-        data: {
-          labels: tagCompletionEntries.map(([tag]) => tag),
-          datasets: [{
-            label: 'Completion Rate %',
-            data: tagCompletionEntries.map(([, v]) => v.rate),
-            backgroundColor: '#a855f7',
-            borderRadius: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false }
-          },
-          scales: {
-            x: {
-              grid: { color: 'rgba(255,255,255,0.1)' },
-              ticks: { color: '#94a3b8' }
-            },
-            y: {
-              grid: { display: false },
-              ticks: { color: '#f8fafc' },
-              max: 100
-            }
-          }
-        }
-      });
-
-      // Tag Distribution Pie Chart
-      const topTagDist = Object.entries(analytics.tagCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 6);
-
-      new Chart(document.getElementById('distributionChart'), {
-        type: 'pie',
-        data: {
-          labels: topTagDist.map(([tag]) => tag),
-          datasets: [{
-            data: topTagDist.map(([, count]) => count),
-            backgroundColor: ['#22d3ee', '#22c55e', '#eab308', '#ef4444', '#a855f7', '#f97316'],
-            borderWidth: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { color: '#f8fafc' }
+              ticks: { color: '#a1a1aa', font: { size: 12 } }
             }
           }
         }
       });
     }
 
-    function showError(message) {
+    function showError(msg) {
       document.getElementById('content').innerHTML = `
         <div class="error">
-          <p>⚠️ ${message}</p>
-          <button class="refresh-btn" onclick="loadData()" style="margin-top:1rem">Try Again</button>
+          <h3>Unable to load data</h3>
+          <p>${msg}</p>
+          <button class="btn btn-primary" onclick="loadData()">Try Again</button>
         </div>
       `;
     }
@@ -695,27 +752,22 @@
       document.getElementById('content').innerHTML = `
         <div class="loading">
           <div class="spinner"></div>
-          <p>Loading analytics...</p>
+          <p>Loading analytics data...</p>
         </div>
       `;
 
       try {
-        bounties = await fetchBounties();
-        const analytics = calculateAnalytics(bounties);
-        renderDashboard(analytics);
-        
-        document.getElementById('lastUpdated').textContent = 
-          `Last updated: ${new Date().toLocaleTimeString()}`;
-      } catch (error) {
-        console.error('Error loading data:', error);
-        showError('Failed to load bounty data. The API might be temporarily unavailable.');
+        bounties = await fetchData();
+        const stats = analyze(bounties);
+        render(stats);
+        document.getElementById('lastUpdate').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      } catch (e) {
+        console.error(e);
+        showError('The API might be temporarily unavailable. Please try again.');
       }
     }
 
-    // Initial load
     loadData();
-
-    // Auto-refresh every 5 minutes
     setInterval(loadData, 5 * 60 * 1000);
   </script>
 </body>
