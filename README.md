@@ -21,6 +21,8 @@ Real-time analytics dashboard for the [AI Bounty Board](https://bounty.owockibot
 
 **🔗 [https://bounty-analytics.surge.sh](https://bounty-analytics.surge.sh)**
 
+![Dashboard Preview](https://img.shields.io/badge/Status-Live-green?style=flat-square)
+
 The dashboard fetches data directly from the Bounty Board API. Deploy your own to Vercel, Netlify, or any static host.
 
 ## Quick Start
